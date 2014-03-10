@@ -52,7 +52,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Delete :%s" % keys.join(':')
+      buddycmd = "Delete :%s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd)
     rescue Exception
       false
@@ -65,7 +65,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Print :%s" % keys.join(':')
+      buddycmd = "Print :%s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd).strip
 
       true
@@ -82,7 +82,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Print :%s" % keys.join(':')
+      buddycmd = "Print :%s" % keys.join(':').inspect
       buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
 
       # TODO: Compare the elements of the array by parsing the output from PlistBuddy
