@@ -20,24 +20,24 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
         if value_type == :array
 
           # Add the array entry
-          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
-                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
+          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
+                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
 
           # Add the elements
           @resource[:value].each do |value|
             plistbuddy(file_path, '-c', buddycmd)
-            buddycmd = keypresent? ? "Set :%s:0 %s" % [ keys.join(':').inspect, value.inspect ]
-                                   : "Add :%s:0 %s %s" % [ keys.join(':').inspect, 'string', value.inspect ]
+            buddycmd = keypresent? ? "Set %s:0 %s" % [ keys.join(':').inspect, value.inspect ]
+                                   : "Add %s:0 %s %s" % [ keys.join(':').inspect, 'string', value.inspect ]
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
           # timezones like 'PST'. So the compromise is that times must be in UTC
-          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
-                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
+          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
+                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
         else
-          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
-                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
+          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
+                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
         end
 
         plistbuddy(file_path, '-c', buddycmd)
@@ -52,7 +52,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Delete :%s" % keys.join(':').inspect
+      buddycmd = "Delete %s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd)
     rescue Exception
       false
@@ -65,7 +65,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Print :%s" % keys.join(':').inspect
+      buddycmd = "Print %s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd).strip
 
       true
@@ -82,7 +82,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
-      buddycmd = "Print :%s" % keys.join(':').inspect
+      buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
 
       # TODO: Compare the elements of the array by parsing the output from PlistBuddy
