@@ -9,6 +9,8 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   "
 
   commands :plistbuddy => "/usr/libexec/PlistBuddy"
+  # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
+  commands :reload_cache => "defaults"
   confine :operatingsystem => :darwin
 
   def create
@@ -28,6 +30,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             plistbuddy(file_path, '-c', buddycmd)
             buddycmd = keypresent? ? "Set %s:0 %s" % [ keys.join(':').inspect, value.inspect ]
                                    : "Add %s:0 %s %s" % [ keys.join(':').inspect, 'string', value.inspect ]
+            reload_cache('read', file_path)
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
           native_date = Date.parse(@resource[:value])
@@ -41,6 +44,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
         end
 
         plistbuddy(file_path, '-c', buddycmd)
+        reload_cache('read', file_path)
 
       rescue Exception
         false
@@ -54,6 +58,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
       buddycmd = "Delete %s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd)
+      reload_cache('read', file_path)
     rescue Exception
       false
     end
