@@ -17,25 +17,27 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
         keys = @resource.keys
         value_type = @resource.value_type
 
-	cmd = keypresent? ? "Set" : "Add"
-
         if value_type == :array
 
           # Add the array entry
-          buddycmd = "%s :%s %s %s" % [ cmd, keys.join(':'), value_type, @resource[:value] ]
+          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
+                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
 
           # Add the elements
           @resource[:value].each do |value|
             plistbuddy(file_path, '-c', buddycmd)
-            buddycmd = "%s :%s:0 %s %s" % [ cmd, keys.join(':'), 'string', value ]
+            buddycmd = keypresent? ? "Set :%s:0 %s" % [ keys.join(':').inspect, value.inspect ]
+                                   : "Add :%s:0 %s %s" % [ keys.join(':').inspect, 'string', value.inspect ]
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
           # timezones like 'PST'. So the compromise is that times must be in UTC
-          buddycmd = "%s :%s %s %s" % [ cmd, keys.join(':'), value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
+          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
+                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
         else
-          buddycmd = "%s :%s %s %s" % [ cmd, keys.join(':'), value_type, @resource[:value] ]
+          buddycmd = keypresent? ? "Set :%s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
+                                 : "Add :%s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
         end
 
         plistbuddy(file_path, '-c', buddycmd)
