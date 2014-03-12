@@ -8,13 +8,15 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   There also seems to be no documentation about the appropriate date format.
   "
 
-  commands :plistbuddy => "/usr/libexec/PlistBuddy", user => @resource[:user]
+  Puppet::Provider::Command.new('plistbuddy')
+  commands :plistbuddy => "/usr/libexec/PlistBuddy"
   # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
   commands :reload_cache => "defaults"
   confine :operatingsystem => :darwin
 
   def create
       begin
+        plistbuddy.options['uid'] = @resource.user
         file_path = @resource.filename
         keys = @resource.keys
         value_type = @resource.value_type
@@ -59,6 +61,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
   def destroy
     begin
+      plistbuddy.options['uid'] = @resource.user
       file_path = @resource.filename
       keys = @resource.keys
 
@@ -90,6 +93,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   def exists?
 
     begin
+      plistbuddy.options['uid'] = @resource.user
       file_path = @resource.filename
       keys = @resource.keys
 
