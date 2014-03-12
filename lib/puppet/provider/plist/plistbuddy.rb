@@ -9,6 +9,16 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   "
 
   commands :plistbuddy => "/usr/libexec/PlistBuddy"
+  has_command('plistbuddy', '/user/libexec/PlistBuddy') do
+    old_command = command
+    def self.command
+      old_command
+    end
+    executable = old_command.executable
+    def executable.options
+      @options
+    end
+  end
   # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
   commands :reload_cache => "defaults"
   confine :operatingsystem => :darwin
