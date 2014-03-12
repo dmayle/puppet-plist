@@ -107,6 +107,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
     rescue Exception => for_traceback
       self.info 'Keypresent exception'
+      self.info for_traceback
       self.info for_traceback.backtrace
       # A bad return value from plistbuddy indicates that the key does not exist.
       false
