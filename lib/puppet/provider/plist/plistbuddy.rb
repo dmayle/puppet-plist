@@ -24,10 +24,12 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
         if value_type == :array
 
+          extended = false
           # Add the array entry if necessary
           self.info 'Array keypresent'
           unless keypresent?
             self.info 'Creating key'
+            extended = true
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               plistbuddy(file_path, '-c', buddycmd)
@@ -38,6 +40,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           @resource[:value].each_with_index do |value, index|
             keys = @resource.keys + [index]
             unless keypresent? keys
+              extended = true
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
               Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
                 plistbuddy(file_path, '-c', buddycmd)
@@ -46,6 +49,21 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             buddycmd = "Set %s %s" % [keys.join(':').inspect, value.inspect]
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               plistbuddy(file_path, '-c', buddycmd)
+            end
+          end
+
+          # Now we have to trim extra keys from the end backwards, so we will linear search to find the length :-(
+          if not extended
+            found_size = @resource[:value].length
+            while keypresent? (@keys + [found_size])
+              found_size += 1
+            end
+            (found_size - 1).downto(@resource[:value].length) do |index|
+              Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
+                keys = @resource.keys + [index]
+                buddycmd = "Delete %s" % keys.join(':').inspect
+                plistbuddy(file_path, '-c', buddycmd)
+              end
             end
           end
           Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
@@ -135,15 +153,11 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       case @resource.value_type
         when :array
           self.info 'Is array type'
-          max_index = 0
           @resource[:value].each_with_index do |value, index|
             self.info 'Checking index %s' % index
             keys = @resource.keys + [index]
             unless keypresent? keys
               return false
-            end
-            if index > max_index
-              max_index = index
             end
             buddycmd = "Print %s" % keys.join(':').inspect
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
