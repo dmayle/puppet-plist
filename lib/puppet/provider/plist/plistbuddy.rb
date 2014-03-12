@@ -168,7 +168,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
               return false
             end
           end
-          true # Assume the existence of the array even if the elements are different. Otherwise we need to parse the output
+          # Make sure there are no extra entries in the array
+          keys = @resource.keys + [@resource[:value].length]
+          return not keypresent? keys
         when :real
           true # Assume the existence of the real number because the actual value will be stored differently.
         when :date
