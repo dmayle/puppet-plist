@@ -97,6 +97,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
       buddycmd = "Print %s" % keys.join(':').inspect
       Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+        self.info 'Keypresent check %s' % buddycmd
         plistbuddy(file_path, '-c', buddycmd).strip
       end
 
