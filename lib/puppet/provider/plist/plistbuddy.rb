@@ -14,6 +14,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   confine :operatingsystem => :darwin
 
   def create
+    notify "Starting create"
       begin
         file_path = @resource.filename
         keys = @resource.keys
@@ -68,6 +69,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def destroy
+    notify "Starting destroy"
     begin
       file_path = @resource.filename
       keys = @resource.keys
@@ -83,6 +85,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def keypresent?(keys = nil)
+    notify "Starting keypresent"
 
     begin
       file_path = @resource.filename
@@ -102,6 +105,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def exists?
+    notify "Starting exists"
 
     begin
       file_path = @resource.filename
@@ -121,11 +125,15 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       case @resource.value_type
         when :array
           notify 'Is array type'
+          max_index = 0
           @resource[:value].each_with_index do |value, index|
             notify 'Checking index %s' % index
             keys = @resource.keys + [index]
             if !keypresent? keys
               return false
+            end
+            if index > max_index
+              max_index = index
             end
             buddycmd = "Print %s" % keys.join(':').inspect
             Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
