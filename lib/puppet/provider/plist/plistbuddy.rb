@@ -170,7 +170,10 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           end
           # Make sure there are no extra entries in the array
           keys = @resource.keys + [@resource[:value].length]
-          return not keypresent? keys
+          if keypresent? keys
+            return false
+          end
+          return true
         when :real
           true # Assume the existence of the real number because the actual value will be stored differently.
         when :date
