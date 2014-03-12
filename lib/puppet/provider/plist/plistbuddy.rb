@@ -8,7 +8,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   There also seems to be no documentation about the appropriate date format.
   "
 
-  commands :plistbuddy => "/usr/libexec/PlistBuddy"
+  commands :plistbuddy => "/usr/libexec/PlistBuddy", user => @resource[:user]
   # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
   commands :reload_cache => "defaults"
   confine :operatingsystem => :darwin
@@ -21,26 +21,32 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
         if value_type == :array
 
-          # Add the array entry
-          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
-                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
-
-          # Add the elements
-          @resource[:value].each do |value|
+          # Add the array entry if necessary
+          if !keypresent?
+            buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
             plistbuddy(file_path, '-c', buddycmd)
-            buddycmd = keypresent? ? "Set %s:0 %s" % [ keys.join(':').inspect, value.inspect ]
-                                   : "Add %s:0 %s %s" % [ keys.join(':').inspect, 'string', value.inspect ]
-            reload_cache('read', file_path)
           end
+
+          # Add the elements. We have to do this starting from zero, because we can't add an element with a gap
+          @resource[:value].each_with_index do |value, index|
+            keys = @resource.keys + [index]
+            if !keypresent? keys
+              buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
+              plistbuddy(file_path, '-c', buddycmd)
+            end
+            buddycmd = "Set %s %s" % [keys.join(':').inspect, value.inspect]
+            plistbuddy(file_path, '-c', buddycmd)
+          end
+          reload_cache('read', file_path)
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
           # timezones like 'PST'. So the compromise is that times must be in UTC
-          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
-                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
+          buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
+                                 : "Add %s %s %s" % [keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
         else
-          buddycmd = keypresent? ? "Set %s %s" % [ keys.join(':').inspect, @resource[:value].inspect ]
-                                 : "Add %s %s %s" % [ keys.join(':').inspect, value_type, @resource[:value].inspect ]
+          buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, @resource[:value].inspect]
+                                 : "Add %s %s %s" % [keys.join(':').inspect, value_type, @resource[:value].inspect]
         end
 
         plistbuddy(file_path, '-c', buddycmd)
@@ -64,11 +70,11 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
     end
   end
 
-  def keypresent?
+  def keypresent?(keys = nil)
 
     begin
       file_path = @resource.filename
-      keys = @resource.keys
+      keys ||= @resource.keys
 
       buddycmd = "Print %s" % keys.join(':').inspect
       plistbuddy(file_path, '-c', buddycmd).strip
@@ -87,6 +93,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       file_path = @resource.filename
       keys = @resource.keys
 
+      # Exception handles key not present
       buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
 
@@ -95,6 +102,17 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       # TODO: Find a way of comparing Real numbers by casting to Float etc.
       case @resource.value_type
         when :array
+          @resource[:value].each_with_index do |value, index|
+            keys = @resource.keys + [index]
+            if !keypresent? keys
+              return false
+            end
+            buddycmd = "Print %s" % keys.join(':').inspect
+            buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+            if buddyvalue != value.to_s
+              return false
+            end
+          end
           true # Assume the existence of the array even if the elements are different. Otherwise we need to parse the output
         when :real
           true # Assume the existence of the real number because the actual value will be stored differently.
@@ -107,6 +125,18 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
     rescue Exception
       # A bad return value from plistbuddy indicates that the key does not exist.
       false
+    end
+  end
+
+  def inferred_type(value)
+    case value
+    when Array then :array
+    when Hash then :dict
+    when %r{^\d+$} then :integer
+    when %r{^\d*\.\d+$} then :real # Doesnt really catch all valid real numbers.
+    when true || false then :bool
+    when %r{^\d{4}-\d{2}-\d{2}} then :date # Not currently supported, requires munging to native Date type
+    else :string
     end
   end
 end
