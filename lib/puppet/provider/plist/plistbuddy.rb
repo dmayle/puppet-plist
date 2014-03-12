@@ -97,6 +97,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       keys = @resource.keys
 
       # Exception handles key not present
+      print 'Checking for key'
       buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
 
@@ -105,13 +106,16 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       # TODO: Find a way of comparing Real numbers by casting to Float etc.
       case @resource.value_type
         when :array
+          print 'Is array type'
           @resource[:value].each_with_index do |value, index|
+            print 'Checking index %s' % index
             keys = @resource.keys + [index]
             if !keypresent? keys
               return false
             end
             buddycmd = "Print %s" % keys.join(':').inspect
             buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+            print 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
             if buddyvalue != value.to_s
               return false
             end
