@@ -23,7 +23,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
         if value_type == :array
 
           # Add the array entry if necessary
-          if !keypresent?
+          self.info 'Array keypresent'
+          unless keypresent?
+            self.info 'Creating key'
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
             Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
               plistbuddy(file_path, '-c', buddycmd)
@@ -33,7 +35,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           # Add the elements. We have to do this starting from zero, because we can't add an element with a gap
           @resource[:value].each_with_index do |value, index|
             keys = @resource.keys + [index]
-            if !keypresent? keys
+            unless keypresent? keys
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
               Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
                 plistbuddy(file_path, '-c', buddycmd)
@@ -48,12 +50,14 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             reload_cache('read', file_path)
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
+          self.info 'Date type'
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
           # timezones like 'PST'. So the compromise is that times must be in UTC
           buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
         else
+          self.info 'Generic type'
           buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, @resource[:value].inspect]
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type, @resource[:value].inspect]
         end
@@ -129,7 +133,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           @resource[:value].each_with_index do |value, index|
             self.info 'Checking index %s' % index
             keys = @resource.keys + [index]
-            if !keypresent? keys
+            unless keypresent? keys
               return false
             end
             if index > max_index
