@@ -66,6 +66,10 @@ Puppet::Type.newtype(:plist) do
     desc "The user to run updates as."
   end
 
+  newparam(:group) do
+    desc "The group to run updates as."
+  end
+
   newparam(:value) do
     desc "The value assigned to the specified key."
   end

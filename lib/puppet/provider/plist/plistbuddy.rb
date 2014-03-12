@@ -9,23 +9,12 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   "
 
   commands :plistbuddy => "/usr/libexec/PlistBuddy"
-  has_command('plistbuddy', '/user/libexec/PlistBuddy') do
-    old_command = command
-    def self.command
-      old_command
-    end
-    executable = old_command.executable
-    def executable.options
-      @options
-    end
-  end
   # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
   commands :reload_cache => "defaults"
   confine :operatingsystem => :darwin
 
   def create
       begin
-        plistbuddy.options['uid'] = @resource.user
         file_path = @resource.filename
         keys = @resource.keys
         value_type = @resource.value_type
@@ -35,7 +24,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           # Add the array entry if necessary
           if !keypresent?
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
-            plistbuddy(file_path, '-c', buddycmd)
+            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+              plistbuddy(file_path, '-c', buddycmd)
+            end
           end
 
           # Add the elements. We have to do this starting from zero, because we can't add an element with a gap
@@ -43,12 +34,18 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             keys = @resource.keys + [index]
             if !keypresent? keys
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
-              plistbuddy(file_path, '-c', buddycmd)
+              Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+                plistbuddy(file_path, '-c', buddycmd)
+              end
             end
             buddycmd = "Set %s %s" % [keys.join(':').inspect, value.inspect]
-            plistbuddy(file_path, '-c', buddycmd)
+            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+              plistbuddy(file_path, '-c', buddycmd)
+            end
           end
-          reload_cache('read', file_path)
+          Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+            reload_cache('read', file_path)
+          end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
@@ -60,8 +57,10 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type, @resource[:value].inspect]
         end
 
-        plistbuddy(file_path, '-c', buddycmd)
-        reload_cache('read', file_path)
+        Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+          plistbuddy(file_path, '-c', buddycmd)
+          reload_cache('read', file_path)
+        end
 
       rescue Exception
         false
@@ -70,13 +69,14 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
   def destroy
     begin
-      plistbuddy.options['uid'] = @resource.user
       file_path = @resource.filename
       keys = @resource.keys
 
       buddycmd = "Delete %s" % keys.join(':').inspect
-      plistbuddy(file_path, '-c', buddycmd)
-      reload_cache('read', file_path)
+      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+        plistbuddy(file_path, '-c', buddycmd)
+        reload_cache('read', file_path)
+      end
     rescue Exception
       false
     end
@@ -89,7 +89,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       keys ||= @resource.keys
 
       buddycmd = "Print %s" % keys.join(':').inspect
-      plistbuddy(file_path, '-c', buddycmd).strip
+      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+        plistbuddy(file_path, '-c', buddycmd).strip
+      end
 
       true
 
@@ -102,14 +104,16 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   def exists?
 
     begin
-      plistbuddy.options['uid'] = @resource.user
       file_path = @resource.filename
       keys = @resource.keys
 
       # Exception handles key not present
       notify 'Checking for key'
       buddycmd = "Print %s" % keys.join(':').inspect
-      buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+      buddyvalue = nil
+      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+        buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+      end
 
       # TODO: Compare the elements of the array by parsing the output from PlistBuddy
       # TODO: Convert desired dates into a format that can be compared by value.
@@ -124,7 +128,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
               return false
             end
             buddycmd = "Print %s" % keys.join(':').inspect
-            buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+              buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
+            end
             notify 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
             if buddyvalue != value.to_s
               return false
