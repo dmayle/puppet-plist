@@ -14,7 +14,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   confine :operatingsystem => :darwin
 
   def create
-    notify "Starting create"
+    self.info "Starting create"
       begin
         file_path = @resource.filename
         keys = @resource.keys
@@ -69,7 +69,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def destroy
-    notify "Starting destroy"
+    self.info "Starting destroy"
     begin
       file_path = @resource.filename
       keys = @resource.keys
@@ -85,7 +85,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def keypresent?(keys = nil)
-    notify "Starting keypresent"
+    self.info "Starting keypresent"
 
     begin
       file_path = @resource.filename
@@ -105,14 +105,14 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def exists?
-    notify "Starting exists"
+    self.info "Starting exists"
 
     begin
       file_path = @resource.filename
       keys = @resource.keys
 
       # Exception handles key not present
-      notify 'Checking for key'
+      self.info 'Checking for key'
       buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = nil
       Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
@@ -124,10 +124,10 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       # TODO: Find a way of comparing Real numbers by casting to Float etc.
       case @resource.value_type
         when :array
-          notify 'Is array type'
+          self.info 'Is array type'
           max_index = 0
           @resource[:value].each_with_index do |value, index|
-            notify 'Checking index %s' % index
+            self.info 'Checking index %s' % index
             keys = @resource.keys + [index]
             if !keypresent? keys
               return false
@@ -139,7 +139,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
               buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
             end
-            notify 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
+            self.info 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
             if buddyvalue != value.to_s
               return false
             end
