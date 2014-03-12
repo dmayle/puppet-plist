@@ -60,7 +60,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           if not extended
             self.info 'Trimming'
             found_size = @resource[:value].length
-            while keypresent? (@keys + [found_size])
+            while keypresent? (@resource.keys + [found_size])
               found_size += 1
             end
             (found_size - 1).downto(@resource[:value].length) do |index|
