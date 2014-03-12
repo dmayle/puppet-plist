@@ -8,7 +8,6 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   There also seems to be no documentation about the appropriate date format.
   "
 
-  Puppet::Provider::Command.new('plistbuddy')
   commands :plistbuddy => "/usr/libexec/PlistBuddy"
   # On Mavericks, editing plist files directly bypasses the cache, so we force a reload after changes are made.
   commands :reload_cache => "defaults"
