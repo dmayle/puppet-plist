@@ -1,3 +1,5 @@
+require 'puppet/util/suidmanager'
+
 Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
   desc "This provider alters plist values using the PlistBuddy(8) command line utility.
