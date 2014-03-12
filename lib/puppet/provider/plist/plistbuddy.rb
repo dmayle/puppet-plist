@@ -16,7 +16,6 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   confine :operatingsystem => :darwin
 
   def create
-    self.info "Starting create"
       begin
         file_path = @resource.filename
         keys = @resource.keys
@@ -24,13 +23,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
         if value_type == :array
 
-          self.info 'Not yet extended'
           extended = false
           # Add the array entry if necessary
-          self.info 'Array keypresent'
           unless keypresent?
-            self.info 'Creating key'
-            self.info 'Have extended'
             extended = true
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
@@ -42,7 +37,6 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           @resource[:value].each_with_index do |value, index|
             keys = @resource.keys + [index]
             unless keypresent? keys
-              self.info 'Have extended'
               extended = true
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
               Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
@@ -56,9 +50,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           end
 
           # Now we have to trim extra keys from the end backwards, so we will linear search to find the length :-(
-          self.info 'Checking extended'
           if not extended
-            self.info 'Trimming'
             found_size = @resource[:value].length
             while keypresent? (@resource.keys + [found_size])
               found_size += 1
@@ -75,14 +67,12 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             reload_cache('read', file_path)
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
-          self.info 'Date type'
           native_date = Date.parse(@resource[:value])
           # Note that PlistBuddy will only accept certain timezone formats like 'EST' or 'GMT' but not other valid
           # timezones like 'PST'. So the compromise is that times must be in UTC
           buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, native_date.strftime('%a %b %d %H:%M:%S %Y')]
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type,  native_date.strftime('%a %b %d %H:%M:%S %Y')]
         else
-          self.info 'Generic type'
           buddycmd = keypresent? ? "Set %s %s" % [keys.join(':').inspect, @resource[:value].inspect]
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type, @resource[:value].inspect]
         end
@@ -92,16 +82,12 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           reload_cache('read', file_path)
         end
 
-      rescue Exception => for_traceback
-        self.info 'Create exception'
-        self.info for_traceback
-        self.info for_traceback.backtrace
+      rescue Exception
         false
       end
   end
 
   def destroy
-    self.info "Starting destroy"
     begin
       file_path = @resource.filename
       keys = @resource.keys
@@ -117,7 +103,6 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
   end
 
   def keypresent?(keys = nil)
-    self.info "Starting keypresent"
 
     begin
       file_path = @resource.filename
@@ -125,44 +110,35 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
       buddycmd = "Print %s" % keys.join(':').inspect
       Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
-        self.info 'Keypresent check %s' % buddycmd
         plistbuddy(file_path, '-c', buddycmd).strip
       end
 
       true
 
-    rescue Exception => for_traceback
-      self.info 'Keypresent exception'
-      self.info for_traceback
-      self.info for_traceback.backtrace
+    rescue Exception
       # A bad return value from plistbuddy indicates that the key does not exist.
       false
     end
   end
 
   def exists?
-    self.info "Starting exists"
 
     begin
       file_path = @resource.filename
       keys = @resource.keys
 
       # Exception handles key not present
-      self.info 'Checking for key'
       buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = nil
       Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
         buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
       end
 
-      # TODO: Compare the elements of the array by parsing the output from PlistBuddy
       # TODO: Convert desired dates into a format that can be compared by value.
       # TODO: Find a way of comparing Real numbers by casting to Float etc.
       case @resource.value_type
         when :array
-          self.info 'Is array type'
           @resource[:value].each_with_index do |value, index|
-            self.info 'Checking index %s' % index
             keys = @resource.keys + [index]
             unless keypresent? keys
               return false
@@ -171,7 +147,6 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
             end
-            self.info 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
             if buddyvalue != value.to_s
               return false
             end
