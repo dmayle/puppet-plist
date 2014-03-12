@@ -29,7 +29,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           unless keypresent?
             self.info 'Creating key'
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
-            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+            Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               plistbuddy(file_path, '-c', buddycmd)
             end
           end
@@ -39,16 +39,16 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
             keys = @resource.keys + [index]
             unless keypresent? keys
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
-              Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+              Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
                 plistbuddy(file_path, '-c', buddycmd)
               end
             end
             buddycmd = "Set %s %s" % [keys.join(':').inspect, value.inspect]
-            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+            Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               plistbuddy(file_path, '-c', buddycmd)
             end
           end
-          Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+          Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
             reload_cache('read', file_path)
           end
         elsif value_type == :date # Example of a date that PlistBuddy will accept Mon Jan 01 00:00:00 EST 4001
@@ -64,7 +64,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
                                  : "Add %s %s %s" % [keys.join(':').inspect, value_type, @resource[:value].inspect]
         end
 
-        Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+        Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
           plistbuddy(file_path, '-c', buddycmd)
           reload_cache('read', file_path)
         end
@@ -81,7 +81,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       keys = @resource.keys
 
       buddycmd = "Delete %s" % keys.join(':').inspect
-      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+      Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
         plistbuddy(file_path, '-c', buddycmd)
         reload_cache('read', file_path)
       end
@@ -98,7 +98,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       keys ||= @resource.keys
 
       buddycmd = "Print %s" % keys.join(':').inspect
-      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+      Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
         self.info 'Keypresent check %s' % buddycmd
         plistbuddy(file_path, '-c', buddycmd).strip
       end
@@ -125,7 +125,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
       self.info 'Checking for key'
       buddycmd = "Print %s" % keys.join(':').inspect
       buddyvalue = nil
-      Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+      Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
         buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
       end
 
@@ -146,7 +146,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
               max_index = index
             end
             buddycmd = "Print %s" % keys.join(':').inspect
-            Puppet::Util::SUIDManager.asuser(@resource.user, @resource.group) do
+            Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
               buddyvalue = plistbuddy(file_path, '-c', buddycmd).strip
             end
             self.info 'Comparing values %s and %s' % [buddyvalue.inspect, value.to_s.inspect]
