@@ -92,7 +92,10 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           reload_cache('read', file_path)
         end
 
-      rescue Exception
+      rescue Exception => for_traceback
+        self.info 'Create exception'
+        self.info for_traceback
+        self.info for_traceback.backtrace
         false
       end
   end
