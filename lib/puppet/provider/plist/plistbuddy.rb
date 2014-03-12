@@ -24,11 +24,13 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
 
         if value_type == :array
 
+          self.info 'Not yet extended'
           extended = false
           # Add the array entry if necessary
           self.info 'Array keypresent'
           unless keypresent?
             self.info 'Creating key'
+            self.info 'Have extended'
             extended = true
             buddycmd = "Add %s %s" % [keys.join(':').inspect, value_type]
             Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
@@ -40,6 +42,7 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           @resource[:value].each_with_index do |value, index|
             keys = @resource.keys + [index]
             unless keypresent? keys
+              self.info 'Have extended'
               extended = true
               buddycmd = "Add %s %s" % [keys.join(':').inspect, inferred_type(value)]
               Puppet::Util::SUIDManager.asuser(@resource[:user], @resource[:group]) do
@@ -53,7 +56,9 @@ Puppet::Type.type(:plist).provide :plistbuddy, :parent => Puppet::Provider do
           end
 
           # Now we have to trim extra keys from the end backwards, so we will linear search to find the length :-(
+          self.info 'Checking extended'
           if not extended
+            self.info 'Trimming'
             found_size = @resource[:value].length
             while keypresent? (@keys + [found_size])
               found_size += 1
